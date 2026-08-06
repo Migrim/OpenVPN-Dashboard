@@ -26,11 +26,6 @@ def _detect_public_ip() -> Tuple[str, str]:
             continue
     return HOST_IP, "local interface (no lookup service reachable)"
 
-# The public IP can change at any time (that is the whole point of DynDNS),
-# so never serve a boot-time snapshot: re-detect on demand with a short cache.
-# A successful DynDNS push overwrites this cache with the address the provider
-# actually saw — on CGNAT/DS-Lite lines that is more reliable than lookup
-# services, which can egress through a different NAT pool IP.
 _public_ip_cache = {"ts": 0.0, "ip": "", "src": ""}
 
 def _public_ip_info(max_age: float = 60.0) -> Tuple[str, str]:
@@ -118,9 +113,12 @@ UPTIME_GAP_SECONDS=3*UPTIME_SAMPLE_INTERVAL
 UPTIME_FLUSH_SECONDS=60
 NET_PING_TARGETS=[t.strip() for t in os.environ.get("NET_PING_TARGETS", "1.1.1.1,8.8.8.8").split(",") if t.strip()]
 NET_LATENCY_RETENTION_SECONDS=24*60*60
-# ping -W is milliseconds on macOS (dev) but seconds on Linux (prod)
 _PING_WAIT_FLAG="-W2000" if os.uname().sysname == "Darwin" else "-W2"
 _uptime_lock=threading.Lock()
+PEER_WATCH_HS_TIMEOUT=int(os.environ.get("PEER_WATCH_HS_TIMEOUT", "130"))
+PEER_WATCH_INTERVAL=max(10, int(os.environ.get("PEER_WATCH_INTERVAL", "30")))
+_peer_watch_lock=threading.Lock()
+_peer_watch_state: Dict[str, Dict[str, Any]] = {}
 GEO_CACHE_SECONDS=6*60*60
 SUDO_BIN=os.environ.get("SUDO_BIN","/usr/bin/sudo")
 BASH_BIN=os.environ.get("BASH_BIN","/bin/bash")
@@ -284,8 +282,8 @@ def ping_ok() -> bool:
     o,c=_run("ping -c1 -W1 1.1.1.1 >/dev/null 2>&1")
     return c==0
 
-_BG_INTERVAL   = int(os.environ.get("BG_CHECK_INTERVAL", "3600"))   # seconds between checks
-_BG_INIT_DELAY = int(os.environ.get("BG_CHECK_DELAY",    "120"))    # delay before first check
+_BG_INTERVAL   = int(os.environ.get("BG_CHECK_INTERVAL", "3600"))   
+_BG_INIT_DELAY = int(os.environ.get("BG_CHECK_DELAY",    "120"))    
 
 def _bg_run_port_check() -> None:
     conf = _read_conf()
@@ -871,9 +869,7 @@ def _uptime_append_state(db: Dict[str, Any], ev_key: str, ls_key: str, state: st
     events = db.setdefault(ev_key, [])
     changed = False
     last_sample = float(db.get(ls_key) or 0.0)
-    # If the monitor itself was offline we cannot know what happened in
-    # between — mark the blind window as "unknown" instead of extending
-    # the previous state over it.
+
     if events and last_sample > 0 and now - last_sample > UPTIME_GAP_SECONDS and events[-1]["state"] != "unknown":
         gap_ts = max(events[-1]["ts"], min(last_sample + UPTIME_SAMPLE_INTERVAL, now))
         events.append({"ts": gap_ts, "state": "unknown"})
@@ -1053,6 +1049,65 @@ def _bg_uptime_loop() -> None:
             pass
         time.sleep(UPTIME_SAMPLE_INTERVAL)
 
+def _check_peer_handshakes() -> None:
+    """Detect per-peer handshake drop/recovery so it lands in the event log even if
+    nobody had the dashboard open when it happened. If several peers drop within the
+    same check, log that separately — simultaneous drops across peers point at the
+    server/network (service restart, firewall, ISP), not one client's own connection."""
+    _, live = list_clients()
+    now = time.time()
+    dropped: List[str] = []
+    recovered: List[str] = []
+
+    with _peer_watch_lock:
+        seen = set()
+        for row in live:
+            name = row.get("name") or ""
+            if not name:
+                continue
+            seen.add(name)
+            lh = row.get("last_handshake") or 0
+            online = lh > 0 and (now - lh) < PEER_WATCH_HS_TIMEOUT
+            prev = _peer_watch_state.get(name)
+            if prev is None:
+                _peer_watch_state[name] = {"online": online, "since": now}
+                continue
+            if prev["online"] and not online:
+                age = int(now - lh) if lh else -1
+                _log_dashboard_event(
+                    f"peer '{name}' went offline"
+                    + (f" (no handshake for {age}s)" if age >= 0 else ""),
+                    "warn",
+                )
+                dropped.append(name)
+                _peer_watch_state[name] = {"online": False, "since": now}
+            elif not prev["online"] and online:
+                outage_s = int(now - prev["since"])
+                _log_dashboard_event(f"peer '{name}' back online (was offline {outage_s}s)")
+                recovered.append(name)
+                _peer_watch_state[name] = {"online": True, "since": now}
+
+        for name in list(_peer_watch_state.keys()):
+            if name not in seen:
+                _peer_watch_state.pop(name, None)
+
+    if len(dropped) >= 2:
+        _log_dashboard_event(
+            f"{len(dropped)} peers lost their handshake in the same check ({', '.join(dropped[:6])}"
+            + (", …" if len(dropped) > 6 else "")
+            + f") — likely a server-side or network cause (service restart, firewall, ISP), not just those clients",
+            "error",
+        )
+
+def _bg_peer_watch_loop() -> None:
+    time.sleep(_BG_INIT_DELAY)
+    while True:
+        try:
+            _check_peer_handshakes()
+        except Exception:
+            app.logger.exception("bg_peer_watch_failed")
+        time.sleep(PEER_WATCH_INTERVAL)
+
 def _load_peer_spark_history() -> Dict[str, List[Dict[str, Any]]]:
     content = ""
     try:
@@ -1215,12 +1270,6 @@ def _peer_throughput_payload(history: Dict[str, List[Dict[str, Any]]] = None) ->
         out[name] = {"rx": rx, "tx": tx}
     return out
 
-# ── Per-peer visited-domain monitoring (opt-in, rolling 24h) ──
-# Sniffs DNS queries on the WG interface with tcpdump and aggregates
-# queried domains into hourly buckets per peer. Only peers whose
-# `monitor_dns` flag is set in peers.json are recorded; nothing runs
-# while no peer has it enabled.
-
 def _tcpdump_bin() -> str:
     return next((p for p in ("/usr/bin/tcpdump", "/usr/sbin/tcpdump") if os.path.exists(p)), "")
 
@@ -1295,7 +1344,6 @@ def _dns_enabled_peer_map() -> Dict[str, str]:
                 out[ip] = name
     return out
 
-# tcpdump -n line: "12:00:00.000000 IP 10.8.0.2.55555 > 1.1.1.1.53: 123+ [1au] A? example.com. (40)"
 _DNS_QUERY_RE = re.compile(r"\bIP6?\s+(\S+)\.\d+\s+>\s+\S+\.(?:53|domain):\s+(.*)$")
 _DNS_QNAME_RE = re.compile(r"\s(?:A|AAAA|HTTPS)\?\s+(\S+)")
 _DNS_DOMAIN_OK = re.compile(r"[a-z0-9._-]{1,253}")
@@ -1336,8 +1384,7 @@ def _dns_capture_session(stats: Dict[str, Any], recent: Dict[Tuple[str, str], fl
     try:
         while True:
             now = time.time()
-            # Refresh the enabled-peer map and stop the session if the last
-            # toggle was switched off.
+
             if now - ip_map_ts >= 5:
                 ip_map = _dns_enabled_peer_map()
                 ip_map_ts = now
@@ -1358,7 +1405,7 @@ def _dns_capture_session(stats: Dict[str, Any], recent: Dict[Tuple[str, str], fl
                 break
             ready, _, _ = select.select([proc.stdout], [], [], 1.0)
             if not ready:
-                # Idle tick: prune the dedup cache and flush to disk.
+
                 for k in [k for k, t in recent.items() if now - t > 30]:
                     recent.pop(k, None)
                 if now - last_save >= DNS_STATS_FLUSH_SECONDS:
@@ -1431,7 +1478,7 @@ def _bg_dns_monitor_loop() -> None:
             if not _dns_enabled_peer_map():
                 time.sleep(5)
                 continue
-            # Make sure exactly one worker owns the capture.
+
             if lock_fd is None:
                 lock_fd = _dns_acquire_capture_lock()
             if lock_fd is None:
@@ -1826,7 +1873,6 @@ def _apply_peer_throttle(name: str, addr: str, mbps: int) -> None:
     rate = f"{max(1, mbps)}mbit"
     burst = f"{max(32, mbps * 16)}k"
     _ensure_htb_qdisc()
-    # Download (server -> peer): HTB class on wg egress, packets selected via fwmark.
     o, _ = _sudo([TC_BIN, "class", "show", "dev", WG_IFACE, "classid", f"1:{handle}"])
     verb = "change" if str(handle) in o else "add"
     _, rc = _sudo([TC_BIN, "class", verb, "dev", WG_IFACE, "parent", "1:", "classid", f"1:{handle}", "htb", "rate", rate, "ceil", rate])
@@ -1840,7 +1886,6 @@ def _apply_peer_throttle(name: str, addr: str, mbps: int) -> None:
         _, c = _sudo([IPTABLES_BIN, "-t", "mangle", "-C", chain, "-d", peer_ip, "-j", "MARK", "--set-mark", str(handle)])
         if c != 0:
             _sudo([IPTABLES_BIN, "-t", "mangle", "-A", chain, "-d", peer_ip, "-j", "MARK", "--set-mark", str(handle)])
-    # Upload (peer -> server): police on wg ingress; per-peer prio doubles as deletable filter id.
     _ensure_ingress_qdisc()
     _sudo([TC_BIN, "filter", "del", "dev", WG_IFACE, "parent", "ffff:", "prio", str(handle)])
     _sudo([TC_BIN, "filter", "add", "dev", WG_IFACE, "parent", "ffff:", "protocol", "ip", "prio", str(handle),
@@ -2056,8 +2101,6 @@ def _data_budget_state_locked(issued: List[Dict[str, Any]], live: List[Dict[str,
                 changed = True
     if persist:
         try:
-            # When the budget feature is off, run enforcement with action "none"
-            # so any existing throttles/pauses are lifted.
             enf_settings = settings if budget_enabled else {**settings, "enforcement": {"action": "none", "throttle_mbps": (settings.get("enforcement") or {}).get("throttle_mbps", 5)}}
             if _enforce_budgets(db, rows, enf_settings, pct):
                 changed = True
@@ -2556,8 +2599,6 @@ def api_status():
         payload["network"]["ping_ok"]=ping_ok()
     except:
         pass
-    # Current internet reachability (from the background sampler) so the dashboard can
-    # flag an ongoing outage without opening the uptime drawer. Cheap in-memory read.
     try:
         with _uptime_lock:
             _net_ev=_uptime_db().get("net_events") or []
@@ -2622,8 +2663,6 @@ def api_uptime():
         _record_uptime_sample(active)
     except Exception:
         app.logger.exception("uptime_sample_failed")
-    # Ping in-request only when the background sampler is stale, so opening
-    # the drawer never blocks on a ping in normal operation.
     try:
         with _uptime_lock:
             net_stale = time.time() - float(_uptime_db().get("net_last_sample") or 0.0) > 2 * UPTIME_SAMPLE_INTERVAL
@@ -2648,7 +2687,6 @@ def api_uptime():
             since_ms = service_started_at_ms()
         except Exception:
             since_ms = 0
-    # Fall back to our own event history (also covers the "down since" case)
     if not since_ms:
         cur_state = "up" if active else "down"
         for (s, _e, st) in reversed(intervals):
@@ -2748,8 +2786,6 @@ def api_users():
     db=_load_peers_db()
     if name in db:
         return jsonify({"ok": False, "error": "already_exists", "hint": "Peer already exists"}), 409
-    # Validate optional config fields before touching wg/conf so a bad value
-    # can't leave a half-created peer behind
     extra_fields={}
     err=_apply_peer_config_fields(extra_fields,data)
     if err:
@@ -2805,7 +2841,6 @@ def _apply_peer_config_fields(meta: dict, data: dict):
     Returns None on success or an (json, status) error tuple."""
     if "dns" in data:
         dns_val = str(data["dns"]).strip()
-        # "none" = omit the DNS line from the generated config entirely
         if dns_val and dns_val.lower() != "none" and not re.match(r'^[\d\s.,a-fA-F:]+$', dns_val):
             return jsonify({"ok": False, "error": "invalid_dns", "hint": "Use comma-separated IP addresses, or 'none'"}), 400
         meta["dns"] = dns_val
@@ -2890,7 +2925,6 @@ def api_users_settings(name: str):
         on = bool(data["monitor_dns"])
         meta["monitor_dns"] = on
         if not on:
-            # Turning monitoring off discards this peer's captured history.
             with _dns_stats_lock:
                 stats = _load_dns_stats()
                 if stats.get("peers", {}).pop(name, None) is not None:
@@ -3100,16 +3134,11 @@ def api_logs():
         app.logger.exception("dashboard_log_merge_failed")
     cutoff=_logs_cleared_at()
     if cutoff:
-        # Undatable lines (boot markers etc.) are dropped too, so a cleared
-        # panel reads as genuinely empty rather than showing leftover noise.
         lines=[ln for ln in lines if _journal_line_ts(ln) >= cutoff]
     return jsonify({"lines":lines,"verbose":verbose,"count":len(lines)})
 
 @app.route("/api/logs/clear",methods=["POST"])
 def api_logs_clear():
-    # The journal is owned by systemd and journalctl can only vacuum it host-wide,
-    # never per-unit — so rather than destroy unrelated system logs we record a
-    # cutoff and hide everything older from the dashboard's Logs panel.
     cutoff=int(time.time())
     _save_dash_setting("logs_cleared_at",cutoff)
     try:
@@ -3117,8 +3146,6 @@ def api_logs_clear():
             _write_json_file_root(DASH_EVENTS_DB,[])
     except Exception:
         app.logger.exception("dash_events_clear_failed")
-    # Deliberately not recorded as a dashboard event — that would immediately
-    # re-populate the panel the user just emptied.
     app.logger.info("logs cleared via dashboard")
     return jsonify({"ok":True,"cleared_at":cutoff})
 
@@ -3879,6 +3906,7 @@ if os.environ.get("WERKZEUG_RUN_MAIN") != "false":
     threading.Thread(target=_bg_retention_loop, daemon=True, name="bg-retention").start()
     threading.Thread(target=_bg_dns_monitor_loop, daemon=True, name="bg-dns-monitor").start()
     threading.Thread(target=_bg_uptime_loop, daemon=True, name="bg-uptime").start()
+    threading.Thread(target=_bg_peer_watch_loop, daemon=True, name="bg-peer-watch").start()
 
 def create_app():
     return app
