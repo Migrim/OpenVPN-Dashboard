@@ -101,6 +101,7 @@ PEER_THROUGHPUT_RETENTION_SECONDS=2*60
 PEER_SPARK_FLUSH_SECONDS=10
 HANDSHAKE_CACHE=os.environ.get("HANDSHAKE_CACHE", os.path.join(WG_DIR, "handshakes.json"))
 HANDSHAKE_FLUSH_SECONDS=30
+BUDGET_FLUSH_SECONDS=int(os.environ.get("BUDGET_FLUSH_SECONDS", "30"))
 DNS_STATS_DB=os.environ.get("DNS_STATS_DB", os.path.join(WG_DIR, "dns_stats.json"))
 DNS_STATS_RETENTION_SECONDS=24*60*60
 DNS_STATS_FLUSH_SECONDS=15
@@ -259,7 +260,7 @@ def service_enabled() -> bool:
 
 def service_started_at_ms() -> int:
     """Return the Unix timestamp (ms) when the service entered active state, or 0."""
-    o,c=_run(f"systemctl show {UNIT} --property=ActiveEnterTimestamp --value 2>/dev/null || true")
+    o,c=_run(f"TZ=UTC systemctl show {UNIT} --property=ActiveEnterTimestamp --value 2>/dev/null || true")
     val=o.strip()
     if not val or val=="n/a":
         return 0
@@ -2025,6 +2026,11 @@ def _data_budget_state_locked(issued: List[Dict[str, Any]], live: List[Dict[str,
         if _total == 0 and _enforce_snap.get(_name) == "paused":
             totals[_name] = int(_last_snap.get(_name, 0) or 0)
     changed = False
+    # Real state transitions (period reset, counter reset, alert crossed, enforcement
+    # changed) persist immediately. Routine last_totals byte-counter updates below don't —
+    # every active peer bumps those on essentially every poll, so they're flushed on the
+    # same throttle as the handshake cache instead of hitting disk on every request.
+    important = False
     if int(db.get("period_start", 0) or 0) != period_start:
         app.logger.info("data_budget_reset period_start=%s reset_time=%s peers=%s", period_start, settings["reset_time"], len(totals))
         if int(db.get("period_start", 0) or 0):
@@ -2035,6 +2041,7 @@ def _data_budget_state_locked(issued: List[Dict[str, Any]], live: List[Dict[str,
         db["last_totals"] = dict(totals)
         db["alert_state"] = {}
         changed = True
+        important = True
     baselines = db.setdefault("baselines", {})
     carryover = db.setdefault("carryover", {})
     last_totals = db.setdefault("last_totals", {})
@@ -2050,6 +2057,7 @@ def _data_budget_state_locked(issued: List[Dict[str, Any]], live: List[Dict[str,
             baselines[name] = current
             base = current
             changed = True
+            important = True
         used = int(carryover.get(name, 0) or 0) + max(0, current - int(base or 0))
         if int(last_totals.get(name, -1) or -1) != current:
             last_totals[name] = current
@@ -2070,9 +2078,11 @@ def _data_budget_state_locked(issued: List[Dict[str, Any]], live: List[Dict[str,
             del alert_log[:-50]
             state["last_level"] = level
             changed = True
+            important = True
         elif not level and state.get("last_level"):
             state.pop("last_level", None)
             changed = True
+            important = True
         peer_budgets = settings.get("peer_budgets", {})
         peer_state = state.setdefault("peers", {})
         seen = set()
@@ -2092,22 +2102,34 @@ def _data_budget_state_locked(issued: List[Dict[str, Any]], live: List[Dict[str,
                 del alert_log[:-50]
                 peer_state[name] = plevel
                 changed = True
+                important = True
             elif not plevel and peer_state.get(name):
                 peer_state.pop(name, None)
                 changed = True
+                important = True
         for name in list(peer_state.keys()):
             if name not in seen:
                 peer_state.pop(name, None)
                 changed = True
+                important = True
     if persist:
         try:
             enf_settings = settings if budget_enabled else {**settings, "enforcement": {"action": "none", "throttle_mbps": (settings.get("enforcement") or {}).get("throttle_mbps", 5)}}
             if _enforce_budgets(db, rows, enf_settings, pct):
                 changed = True
+                important = True
         except Exception:
             app.logger.exception("budget_enforce_failed")
-    if changed and persist:
-        _save_data_budget_db(db)
+    if persist and changed:
+        if important:
+            _save_data_budget_db(db)
+            app.config["_budget_last_flush"] = time.time()
+        else:
+            now = time.time()
+            last_flush = float(app.config.get("_budget_last_flush", 0) or 0)
+            if now - last_flush >= BUDGET_FLUSH_SECONDS:
+                _save_data_budget_db(db)
+                app.config["_budget_last_flush"] = now
     return {
         "settings": settings,
         "period_start": period_start,
