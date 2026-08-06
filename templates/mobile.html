@@ -15,10 +15,13 @@
 (function () {
   var t = localStorage.getItem('WG_THEME');
   if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
-  var mt = document.querySelector('meta[name="theme-color"]');
-  if (mt) mt.setAttribute('content', t === 'dark' ? '#14100C' : '#F5EEE2');
   var a = localStorage.getItem('WG_ACCENT');
   if (a && a !== 'terracotta') document.documentElement.classList.add('accent-' + a);
+  var sc = localStorage.getItem('WG_SOFT_COLORS') === 'true';
+  if (sc) document.documentElement.classList.add('soft-colors');
+  if (sc && localStorage.getItem('WG_ACCENT_TINT') === 'true') document.documentElement.classList.add('accent-tint');
+  var mt = document.querySelector('meta[name="theme-color"]');
+  if (mt) mt.setAttribute('content', sc ? (t === 'dark' ? '#000000' : '#FFFFFF') : (t === 'dark' ? '#14100C' : '#F5EEE2'));
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(function () {});
   }
@@ -52,6 +55,9 @@
   --muted-2:     #A89C8C;
   --border:      #E6DCC8;
   --border-strong: #D6C9B0;
+  --field-ink:    #2A2520;
+  --field-muted:  #8A7F72;
+  --field-border: #E6DCC8;
   --accent:      oklch(59% 0.15 33);
   --accent-soft: oklch(89% 0.06 33);
   --accent-2:    oklch(55% 0.09 150);
@@ -80,6 +86,9 @@
   --muted-2:     #6B6256;
   --border:      #3A2F24;
   --border-strong: #4D3E2C;
+  --field-ink:    #EFE6D8;
+  --field-muted:  #8A7F72;
+  --field-border: #3A2F24;
   --accent:      oklch(68% 0.15 33);
   --accent-soft: oklch(32% 0.08 33);
   --accent-2:    oklch(70% 0.10 150);
@@ -91,6 +100,54 @@
   --danger-soft: oklch(30% 0.07 25);
   --shadow:      0 1px 3px rgba(0,0,0,0.5), 0 4px 14px rgba(0,0,0,0.4);
   --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
+}
+/* Soft colors on: swap the warm cream/charcoal surfaces for a clean neutral
+   white / dark-gray palette. Accent + status colors are untouched. */
+.soft-colors {
+  --bg: #FFFFFF;
+  --bg-2: #F5F5F5;
+  --card: #FFFFFF;
+  --card-raised: #FAFAFA;
+  --ink: #1A1A1A;
+  --ink-2: #404040;
+  --muted: #757575;
+  --muted-2: #9E9E9E;
+  --border: #E6E6E6;
+  --border-strong: #D4D4D4;
+  --field-ink: #1A1A1A;
+  --field-muted: #757575;
+  --field-border: #E6E6E6;
+}
+[data-theme="dark"].soft-colors {
+  --bg: #000000;
+  --bg-2: #070707;
+  --card: #0D0D0D;
+  --card-raised: #151515;
+  --ink: #F5F5F5;
+  --ink-2: #D0D0D0;
+  --muted: #8F8F8F;
+  --muted-2: #616161;
+  --border: #202020;
+  --border-strong: #2A2A2A;
+  --field-ink: #F5F5F5;
+  --field-muted: #8F8F8F;
+  --field-border: #202020;
+}
+
+/* Accent tint (soft colors sub-option): text, numbers and icons pick up shades
+   of the selected accent hue instead of plain neutral gray. Backgrounds,
+   containers, borders and --field-* (input text/borders) are left untouched. */
+.accent-tint {
+  --ink: oklch(from var(--accent) 15% calc(c * 0.85) h);
+  --ink-2: oklch(from var(--accent) 29% calc(c * 0.8) h);
+  --muted: oklch(from var(--accent) 49% calc(c * 0.65) h);
+  --muted-2: oklch(from var(--accent) 64% calc(c * 0.5) h);
+}
+[data-theme="dark"].accent-tint {
+  --ink: oklch(from var(--accent) 95% calc(c * 0.3) h);
+  --ink-2: oklch(from var(--accent) 84% calc(c * 0.4) h);
+  --muted: oklch(from var(--accent) 60% calc(c * 0.55) h);
+  --muted-2: oklch(from var(--accent) 44% calc(c * 0.55) h);
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { background: var(--bg); }
@@ -259,16 +316,16 @@ body {
 }
 .m-search {
   display: flex; align-items: center; gap: 8px;
-  background: var(--card); border: 1px solid var(--border);
+  background: var(--card); border: 1px solid var(--field-border);
   border-radius: 10px; padding: 0 12px; height: 40px;
   box-shadow: var(--shadow-sm);
 }
 .m-search svg { flex-shrink: 0; color: var(--muted); }
 .m-search input {
   flex: 1; border: none; background: none; outline: none;
-  font-family: var(--sans); font-size: 16px; color: var(--ink);
+  font-family: var(--sans); font-size: 16px; color: var(--field-ink);
 }
-.m-search input::placeholder { color: var(--muted); }
+.m-search input::placeholder { color: var(--field-muted); }
 .m-search-clear { background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px; display: grid; place-items: center; }
 
 .m-peer-list { padding: 0 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -354,8 +411,8 @@ body {
   display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
 }
 .m-input {
-  width: 100%; padding: 11px 13px; border: 1px solid var(--border);
-  border-radius: 10px; background: var(--bg-2); color: var(--ink);
+  width: 100%; padding: 11px 13px; border: 1px solid var(--field-border);
+  border-radius: 10px; background: var(--bg-2); color: var(--field-ink);
   font-family: var(--sans); font-size: 16px; outline: none;
   transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
 }
@@ -480,7 +537,7 @@ select.m-input { background-image: none; }
 
 /* ── Stepper ── */
 .m-stepper {
-  display: inline-flex; align-items: center; border: 1px solid var(--border);
+  display: inline-flex; align-items: center; border: 1px solid var(--field-border);
   border-radius: 10px; background: var(--bg-2); overflow: hidden;
 }
 .m-stepper button {
@@ -491,8 +548,8 @@ select.m-input { background-image: none; }
 .m-stepper button:active { background: var(--border); }
 .m-stepper input {
   width: 66px; text-align: center; border: none; background: none; outline: none;
-  font-family: var(--mono); font-size: 16px; color: var(--ink);
-  border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+  font-family: var(--mono); font-size: 16px; color: var(--field-ink);
+  border-left: 1px solid var(--field-border); border-right: 1px solid var(--field-border);
   height: 42px; -webkit-appearance: none; appearance: none; border-radius: 0;
 }
 
@@ -556,8 +613,8 @@ select.m-input { background-image: none; }
 .m-login-title { font-family: var(--serif); font-size: 28px; color: var(--ink); margin-bottom: 6px; }
 .m-login-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
 .m-login-input {
-  width: 100%; padding: 12px 14px; border: 1px solid var(--border);
-  border-radius: 10px; background: var(--bg-2); color: var(--ink);
+  width: 100%; padding: 12px 14px; border: 1px solid var(--field-border);
+  border-radius: 10px; background: var(--bg-2); color: var(--field-ink);
   font-family: var(--sans); font-size: 16px; outline: none;
   margin-bottom: 12px; transition: border-color 0.15s;
 }
@@ -616,8 +673,8 @@ select.m-input { background-image: none; }
 [data-theme="dark"].accent-plum { --accent: oklch(70% 0.13 330); --accent-soft: oklch(30% 0.08 330); --accent-2: oklch(75% 0.15 350); }
 .accent-blue { --accent: oklch(52% 0.22 235); --accent-soft: oklch(91% 0.05 235); --accent-2: oklch(56% 0.10 195); }
 [data-theme="dark"].accent-blue { --accent: oklch(67% 0.20 235); --accent-soft: oklch(28% 0.10 235); --accent-2: oklch(68% 0.10 195); }
-.accent-ink { --accent: oklch(55% 0.19 27); --accent-soft: oklch(89% 0.05 27); --accent-2: oklch(58% 0.15 48); }
-[data-theme="dark"].accent-ink { --accent: oklch(67% 0.21 27); --accent-soft: oklch(30% 0.11 27); --accent-2: oklch(70% 0.15 48); }
+.accent-ink { --accent: oklch(52% 0.20 20); --accent-soft: oklch(90% 0.05 20); --accent-2: oklch(58% 0.15 48); }
+[data-theme="dark"].accent-ink { --accent: oklch(68% 0.20 20); --accent-soft: oklch(30% 0.11 20); --accent-2: oklch(70% 0.15 48); }
 .accent-amber { --accent: oklch(70% 0.15 75); --accent-soft: oklch(93% 0.07 75); --accent-2: oklch(55% 0.12 210); }
 [data-theme="dark"].accent-amber { --accent: oklch(75% 0.16 75); --accent-soft: oklch(30% 0.09 75); --accent-2: oklch(65% 0.11 210); }
 
@@ -629,6 +686,13 @@ select.m-input { background-image: none; }
 .m-settings-row + .m-settings-row, .m-settings-row + .m-row-btn, .m-row-btn + .m-settings-row { border-top: 1px solid var(--border); }
 .m-settings-lbl { font-size: 14px; color: var(--ink); }
 .m-settings-sub { font-size: 11.5px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+.m-settings-lbl-row { display: flex; align-items: center; }
+.m-soft-preview { display: inline-flex; align-items: center; margin-right: 9px; flex-shrink: 0; }
+.m-soft-preview-swatch { width: 15px; height: 15px; border-radius: 4px; border: 1px solid var(--border-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.m-soft-preview-before { background: #F5EEE2; margin-right: -6px; z-index: 1; }
+.m-soft-preview-after { background: #FFFFFF; }
+[data-theme="dark"] .m-soft-preview-before { background: #14100C; }
+[data-theme="dark"] .m-soft-preview-after { background: #000000; }
 .m-seg { display: flex; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }
 .m-seg-btn { padding: 5px 12px; border-radius: 6px; border: none; background: none; font-family: var(--mono); font-size: 12px; color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .m-seg-btn.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
@@ -2919,13 +2983,13 @@ function LogsTab({ toast }) {
 }
 
 /* ─── Settings tab ─── */
-function SettingsTab({ theme, setTheme, accent, setAccent, chartTweaks, setChartTweaks, onLogout, status, updateInfo, openSheet, onService, askConfirm, svcBusy }) {
+function SettingsTab({ theme, setTheme, accent, setAccent, softColors, setSoftColors, accentTint, setAccentTint, chartTweaks, setChartTweaks, onLogout, status, updateInfo, openSheet, onService, askConfirm, svcBusy }) {
   const accents = [
     { id: 'terracotta', color: 'oklch(59% 0.15 33)' },
     { id: 'forest',     color: 'oklch(55% 0.11 150)' },
     { id: 'plum',       color: 'oklch(48% 0.12 330)' },
     { id: 'blue',       color: 'oklch(52% 0.22 235)' },
-    { id: 'ink',        color: 'oklch(55% 0.19 27)'  },
+    { id: 'ink',        color: 'oklch(52% 0.20 20)'  },
     { id: 'amber',      color: 'oklch(70% 0.15 75)'  },
   ];
   const tweak = (k, v) => setChartTweaks(p => ({ ...p, [k]: v }));
@@ -2962,6 +3026,25 @@ function SettingsTab({ theme, setTheme, accent, setAccent, chartTweaks, setChart
               ))}
             </div>
           </div>
+          <div className="m-settings-row">
+            <span className="m-settings-lbl m-settings-lbl-row">
+              <span className="m-soft-preview" aria-hidden="true">
+                <span className="m-soft-preview-swatch m-soft-preview-before" />
+                <span className="m-soft-preview-swatch m-soft-preview-after" />
+              </span>
+              Soft colors
+            </span>
+            <Toggle value={softColors} onChange={setSoftColors} />
+          </div>
+          {softColors && (
+            <div className="m-settings-row">
+              <div>
+                <div className="m-settings-lbl">Accent tint</div>
+                <div className="m-settings-sub">Text &amp; numbers in accent shades</div>
+              </div>
+              <Toggle value={accentTint} onChange={setAccentTint} />
+            </div>
+          )}
         </div>
       </div>
 
@@ -3079,6 +3162,8 @@ function MobileApp() {
   const [tab, setTab] = useState('home');
   const [theme, setTheme] = useState(() => localStorage.getItem('WG_THEME') || 'light');
   const [accent, setAccent] = useState(() => localStorage.getItem('WG_ACCENT') || 'terracotta');
+  const [softColors, setSoftColors] = useState(() => localStorage.getItem('WG_SOFT_COLORS') === 'true');
+  const [accentTint, setAccentTint] = useState(() => localStorage.getItem('WG_ACCENT_TINT') === 'true');
   const [chartTweaks, setChartTweaks] = useState(() => { try { return JSON.parse(localStorage.getItem('WG_CHART_TWEAKS') || '{}'); } catch { return {}; } });
   const [status, setStatus] = useState(null);
   const [rxBps, setRxBps] = useState(0);
@@ -3109,15 +3194,27 @@ function MobileApp() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('WG_THEME', theme);
-    const mt = document.querySelector('meta[name="theme-color"]');
-    if (mt) mt.setAttribute('content', theme === 'dark' ? '#14100C' : '#F5EEE2');
   }, [theme]);
   useEffect(() => {
     const el = document.documentElement;
-    el.className = el.className.replace(/\baccent-\S+/g, '').trim();
+    // Only strip actual accent-theme classes — "accent-tint" is a separate
+    // toggle and must survive an accent color change.
+    el.className = el.className.replace(/\baccent-(?!tint\b)\S+/g, '').trim();
     if (accent !== 'terracotta') el.classList.add('accent-' + accent);
     localStorage.setItem('WG_ACCENT', accent);
   }, [accent]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('soft-colors', softColors);
+    localStorage.setItem('WG_SOFT_COLORS', softColors ? 'true' : 'false');
+  }, [softColors]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('accent-tint', !!(softColors && accentTint));
+    localStorage.setItem('WG_ACCENT_TINT', accentTint ? 'true' : 'false');
+  }, [softColors, accentTint]);
+  useEffect(() => {
+    const mt = document.querySelector('meta[name="theme-color"]');
+    if (mt) mt.setAttribute('content', softColors ? (theme === 'dark' ? '#000000' : '#FFFFFF') : (theme === 'dark' ? '#14100C' : '#F5EEE2'));
+  }, [theme, softColors]);
   useEffect(() => {
     localStorage.setItem('WG_CHART_TWEAKS', JSON.stringify(chartTweaks));
   }, [chartTweaks]);
@@ -3440,6 +3537,8 @@ function MobileApp() {
           <SettingsTab
             theme={theme} setTheme={setTheme}
             accent={accent} setAccent={setAccent}
+            softColors={softColors} setSoftColors={setSoftColors}
+            accentTint={accentTint} setAccentTint={setAccentTint}
             chartTweaks={chartTweaks} setChartTweaks={setChartTweaks}
             onLogout={authRequired ? handleLogout : null}
             status={status} updateInfo={updateInfo}

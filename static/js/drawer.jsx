@@ -2156,7 +2156,7 @@ function SettingsDrawer({ tweaks, setTweaks, onClose, onUpdateAvailable }) {
     { id: 'forest',     c: 'oklch(55% 0.11 150)', name: 'Forest' },
     { id: 'blue',       c: 'oklch(55% 0.22 235)', name: 'Iris'  },
     { id: 'plum',       c: 'oklch(48% 0.12 330)', name: 'Plum' },
-    { id: 'ink',        c: 'oklch(55% 0.19 27)',  name: 'Ember' },
+    { id: 'ink',        c: 'oklch(52% 0.20 20)',  name: 'Ember' },
   ];
 
   return (
@@ -2196,6 +2196,53 @@ function SettingsDrawer({ tweaks, setTweaks, onClose, onUpdateAvailable }) {
                   <span className="set-accent-name">{a.name}</span>
                 </button>
               ))}
+            </div>
+            <div className="settings-list">
+              <div className="setting-row">
+                <div className="setting-row-main">
+                  <span className="soft-preview" aria-hidden="true">
+                    <span className="soft-preview-swatch soft-preview-before" />
+                    <span className="soft-preview-swatch soft-preview-after" />
+                  </span>
+                  <div>
+                    <div className="setting-title">Soft colors</div>
+                    <div className="setting-desc">Clean white / dark gray surfaces instead of warm cream</div>
+                  </div>
+                </div>
+                <div className="setting-control">
+                  <button
+                    className={`toggle ${tweaks.softColors ? 'on' : ''}`}
+                    onClick={() => setTweaks({ ...tweaks, softColors: !tweaks.softColors })}
+                    aria-pressed={!!tweaks.softColors}
+                  >
+                    <span className="toggle-knob" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Accent tint — only meaningful once soft colors is on, so it reveals
+                  itself as a sub-option instead of sitting there disabled. */}
+              <div className={`collapse-rows${tweaks.softColors ? ' open' : ''}`}>
+                <div>
+                  <div className="chart-fine-list">
+                    <div className="setting-row">
+                      <div>
+                        <div className="setting-title">Accent tint</div>
+                        <div className="setting-desc">Text, numbers and icons pick up shades of your accent color. Backgrounds, containers and input fields stay neutral.</div>
+                      </div>
+                      <div className="setting-control">
+                        <button
+                          className={`toggle ${tweaks.accentTint ? 'on' : ''}`}
+                          onClick={() => setTweaks({ ...tweaks, accentTint: !tweaks.accentTint })}
+                          aria-pressed={!!tweaks.accentTint}
+                        >
+                          <span className="toggle-knob" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
 

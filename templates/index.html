@@ -30,6 +30,13 @@
     if (savedAccent && savedAccent !== 'terracotta' && validAccents.includes(savedAccent)) {
       document.documentElement.classList.add('accent-' + savedAccent);
     }
+    const savedSoftColors = localStorage.getItem('WG_SOFT_COLORS') === 'true';
+    if (savedSoftColors) {
+      document.documentElement.classList.add('soft-colors');
+    }
+    if (savedSoftColors && localStorage.getItem('WG_ACCENT_TINT') === 'true') {
+      document.documentElement.classList.add('accent-tint');
+    }
   })();
 </script>
 <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='icons/favicon.svg') }}">
@@ -58,6 +65,11 @@
   --muted-2: #A89C8C;
   --border: #E6DCC8;
   --border-strong: #D6C9B0;
+  /* Neutral tokens that input fields anchor to — never re-themed by .accent-tint,
+     so typed text and field outlines stay legible regardless of accent tinting. */
+  --field-ink: #2A2520;
+  --field-muted: #8A7F72;
+  --field-border: #E6DCC8;
   --accent: oklch(59% 0.15 33);
   --accent-soft: oklch(89% 0.06 33);
   --avatar-bg: var(--accent-soft);
@@ -89,6 +101,9 @@
   --muted-2: #6B6256;
   --border: #3A2F24;
   --border-strong: #4D3E2C;
+  --field-ink: #EFE6D8;
+  --field-muted: #8A7F72;
+  --field-border: #3A2F24;
   --accent: oklch(68% 0.15 33);
   --accent-soft: oklch(32% 0.08 33);
   --avatar-bg: var(--accent);
@@ -105,10 +120,59 @@
   --shadow-lg: 0 2px 4px rgba(0,0,0,0.5), 0 16px 40px rgba(0,0,0,0.6);
 }
 
+/* Soft colors on: swap the warm cream/charcoal surfaces for a clean neutral
+   white / dark-gray palette. Accent + status colors are untouched. */
+.soft-colors {
+  --bg: #FFFFFF;
+  --bg-2: #F5F5F5;
+  --card: #FFFFFF;
+  --card-raised: #FAFAFA;
+  --ink: #1A1A1A;
+  --ink-2: #404040;
+  --muted: #757575;
+  --muted-2: #9E9E9E;
+  --border: #E6E6E6;
+  --border-strong: #D4D4D4;
+  --field-ink: #1A1A1A;
+  --field-muted: #757575;
+  --field-border: #E6E6E6;
+}
+[data-theme="dark"].soft-colors {
+  --bg: #000000;
+  --bg-2: #070707;
+  --card: #0D0D0D;
+  --card-raised: #151515;
+  --ink: #F5F5F5;
+  --ink-2: #D0D0D0;
+  --muted: #8F8F8F;
+  --muted-2: #616161;
+  --border: #202020;
+  --border-strong: #2A2A2A;
+  --field-ink: #F5F5F5;
+  --field-muted: #8F8F8F;
+  --field-border: #202020;
+}
+
+/* Accent tint (soft colors sub-option): text, numbers and icons pick up shades
+   of the selected accent hue instead of plain neutral gray. Backgrounds,
+   containers, borders and --field-* (input text/borders) are left untouched. */
+.accent-tint {
+  --ink: oklch(from var(--accent) 15% calc(c * 0.85) h);
+  --ink-2: oklch(from var(--accent) 29% calc(c * 0.8) h);
+  --muted: oklch(from var(--accent) 49% calc(c * 0.65) h);
+  --muted-2: oklch(from var(--accent) 64% calc(c * 0.5) h);
+}
+[data-theme="dark"].accent-tint {
+  --ink: oklch(from var(--accent) 95% calc(c * 0.3) h);
+  --ink-2: oklch(from var(--accent) 84% calc(c * 0.4) h);
+  --muted: oklch(from var(--accent) 60% calc(c * 0.55) h);
+  --muted-2: oklch(from var(--accent) 44% calc(c * 0.55) h);
+}
+
 .accent-forest { --accent: oklch(55% 0.11 150); --accent-soft: oklch(88% 0.05 150); --accent-2: oklch(58% 0.12 42); }
 [data-theme="dark"].accent-forest { --accent: oklch(70% 0.12 150); --accent-soft: oklch(30% 0.08 150); --accent-2: oklch(71% 0.13 42); }
-.accent-ink { --accent: oklch(55% 0.19 27); --accent-soft: oklch(89% 0.05 27); --accent-2: oklch(58% 0.15 48); }
-[data-theme="dark"].accent-ink { --accent: oklch(67% 0.21 27); --accent-soft: oklch(30% 0.11 27); --accent-2: oklch(70% 0.15 48); }
+.accent-ink { --accent: oklch(52% 0.20 20); --accent-soft: oklch(90% 0.05 20); --accent-2: oklch(58% 0.15 48); }
+[data-theme="dark"].accent-ink { --accent: oklch(68% 0.20 20); --accent-soft: oklch(30% 0.11 20); --accent-2: oklch(70% 0.15 48); }
 .accent-plum { --accent: oklch(48% 0.12 330); --accent-soft: oklch(88% 0.05 330); --accent-2: oklch(64% 0.16 350); }
 [data-theme="dark"].accent-plum { --accent: oklch(70% 0.13 330); --accent-soft: oklch(30% 0.08 330); --accent-2: oklch(75% 0.15 350); }
 .accent-blue { --accent: oklch(52% 0.22 235); --accent-soft: oklch(91% 0.05 235); --accent-2: oklch(56% 0.10 195); }
@@ -215,7 +279,7 @@ body {
   align-items: center;
   gap: 10px;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   padding: 0 12px;
   border-radius: 10px;
   width: 100%;
@@ -229,9 +293,9 @@ body {
 .search input {
   flex: 1; border: none; background: none; outline: none;
   font-family: var(--sans);
-  font-size: 13px; color: var(--ink);
+  font-size: 13px; color: var(--field-ink);
 }
-.search input::placeholder { color: var(--muted); }
+.search input::placeholder { color: var(--field-muted); }
 .kbd {
   font-family: var(--mono);
   font-size: 10px;
@@ -733,6 +797,15 @@ html.theme-switching .theme-toggle-icon {
 .set-accent-name { font-size: 10.5px; color: var(--muted); font-weight: 500; }
 .set-accent.on .set-accent-name { color: var(--accent); }
 
+/* Settings drawer — Soft colors row: before/after surface swatch + nested Accent tint option */
+.setting-row-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.soft-preview { display: flex; align-items: center; flex-shrink: 0; }
+.soft-preview-swatch { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--border-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
+.soft-preview-before { background: #F5EEE2; margin-right: -9px; z-index: 1; }
+.soft-preview-after { background: #FFFFFF; }
+[data-theme="dark"] .soft-preview-before { background: #14100C; }
+[data-theme="dark"] .soft-preview-after { background: #000000; }
+
 /* Skeleton loading */
 @keyframes skelShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 .skel { display: inline-block; height: 11px; border-radius: 4px; background: linear-gradient(90deg, var(--border) 25%, color-mix(in oklch, var(--border) 60%, var(--card)) 50%, var(--border) 75%); background-size: 200% 100%; animation: skelShimmer 1.4s ease-in-out infinite; vertical-align: middle; }
@@ -828,12 +901,12 @@ html.theme-switching .theme-toggle-icon {
 .setting-row:first-child { border-top: none; padding-top: 4px; }
 .setting-title { font-size: 13px; color: var(--ink); font-weight: 500; }
 .setting-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
-.stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; background: var(--bg-2); border: 1px solid var(--field-border); border-radius: 7px; padding: 2px; }
 .stepper button { width: 26px; height: 24px; border: none; background: transparent; cursor: pointer; color: var(--muted); border-radius: 4px; font-size: 14px; }
 .stepper button:hover { background: var(--card); color: var(--ink); }
 .stepper span { min-width: 52px; text-align: center; font-size: 12px; color: var(--ink); }
 .stepper .stepper-val { display: inline-flex; align-items: baseline; justify-content: center; gap: 3px; min-width: 52px; }
-.stepper .stepper-val input { border: none; background: transparent; outline: none; text-align: right; font-size: 12px; color: var(--ink); font-family: var(--mono); padding: 2px 0; border-radius: 4px; appearance: textfield; -moz-appearance: textfield; }
+.stepper .stepper-val input { border: none; background: transparent; outline: none; text-align: right; font-size: 12px; color: var(--field-ink); font-family: var(--mono); padding: 2px 0; border-radius: 4px; appearance: textfield; -moz-appearance: textfield; }
 .stepper .stepper-val input::-webkit-outer-spin-button, .stepper .stepper-val input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .stepper .stepper-val input:hover { background: var(--card); }
 .stepper .stepper-val input:focus { background: var(--card); box-shadow: 0 0 0 1px var(--accent); }
@@ -841,7 +914,7 @@ html.theme-switching .theme-toggle-icon {
 .stepper-sm .stepper-val { min-width: 46px; }
 .stepper-sm .stepper-val input { font-size: 11px; }
 .stepper-sm .stepper-val .stepper-unit { font-size: 10px; }
-.select-input { font-family: var(--mono); font-size: 12px; padding: 6px 10px; background: var(--bg-2); border: 1px solid var(--border); color: var(--ink); border-radius: 7px; cursor: pointer; }
+.select-input { font-family: var(--mono); font-size: 12px; padding: 6px 10px; background: var(--bg-2); border: 1px solid var(--field-border); color: var(--field-ink); border-radius: 7px; cursor: pointer; }
 .toggle { width: 38px; height: 22px; border-radius: 99px; background: var(--border); border: none; position: relative; cursor: pointer; transition: background 0.2s; padding: 0; }
 .toggle.on { background: var(--accent); }
 .toggle-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; background: var(--card); border-radius: 50%; transition: transform 0.2s; box-shadow: var(--shadow-sm); }
@@ -1661,9 +1734,9 @@ html.theme-switching .theme-toggle-icon {
 .ap-input {
   width: 100%;
   background: var(--bg-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: 8px;
-  color: var(--ink);
+  color: var(--field-ink);
   padding: 9px 12px;
   font-family: var(--mono);
   font-size: 12px;
@@ -1813,7 +1886,7 @@ html.theme-switching .theme-toggle-icon {
 .ap-avatar-ok { background: var(--success-soft) !important; color: var(--success) !important; }
 .ap-label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; font-weight: 500; margin-bottom: 6px; }
 .ap-label-opt { color: var(--muted-2); text-transform: lowercase; letter-spacing: 0; font-size: 10px; margin-left: 6px; }
-.ap-input { width: 100%; font-family: var(--sans); font-size: 13px; padding: 9px 12px; background: var(--bg-2); border: 1px solid var(--border); color: var(--ink); border-radius: 7px; outline: none; transition: border-color 0.15s; box-sizing: border-box; }
+.ap-input { width: 100%; font-family: var(--sans); font-size: 13px; padding: 9px 12px; background: var(--bg-2); border: 1px solid var(--field-border); color: var(--field-ink); border-radius: 7px; outline: none; transition: border-color 0.15s; box-sizing: border-box; }
 .ap-input.mono { font-family: var(--mono); font-size: 12px; }
 .ap-input:focus { border-color: var(--accent); background: var(--card-raised); }
 .ap-input-err { border-color: var(--danger); }
@@ -1846,7 +1919,7 @@ html.theme-switching .theme-toggle-icon {
 .ap-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 8px; background: var(--accent-soft); color: var(--accent); border-radius: 99px; font-size: 11px; font-family: var(--mono); }
 .ap-tag button { background: transparent; border: none; color: currentColor; cursor: pointer; font-size: 13px; padding: 0 4px; line-height: 1; opacity: 0.7; }
 .ap-tag button:hover { opacity: 1; }
-.ap-tag-input { flex: 1; min-width: 100px; border: none; background: transparent; outline: none; font-family: var(--sans); font-size: 12px; color: var(--ink); }
+.ap-tag-input { flex: 1; min-width: 100px; border: none; background: transparent; outline: none; font-family: var(--sans); font-size: 12px; color: var(--field-ink); }
 .ap-tag-presets { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .pseudo-qr { border: 1px solid var(--border); border-radius: 8px; }
 .ap-body { gap: 20px; padding-bottom: 30px; }
@@ -1930,9 +2003,9 @@ html.theme-switching .theme-toggle-icon {
 .ap2-name-wrap { position: relative; display: flex; align-items: center; }
 .ap2-name-wrap .ap-input { padding-left: 13px; }
 .ap2-name-ok { position: absolute; right: 11px; color: var(--success); display: grid; place-items: center; }
-.ap2-ip-row { display: flex; align-items: center; gap: 8px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 8px 8px 13px; }
+.ap2-ip-row { display: flex; align-items: center; gap: 8px; background: var(--bg-2); border: 1px solid var(--field-border); border-radius: 8px; padding: 8px 8px 8px 13px; }
 .ap2-ip-lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.ap2-ip-row input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-family: var(--mono); font-size: 13px; color: var(--ink); }
+.ap2-ip-row input { flex: 1; min-width: 0; border: none; background: transparent; outline: none; font-family: var(--mono); font-size: 13px; color: var(--field-ink); }
 .ap2-ip-row input.ap-err { color: var(--danger); }
 
 /* Pro-options stack */
@@ -3275,9 +3348,9 @@ html:not([data-theme="dark"]) .coll.open .ap-input:focus { background: var(--car
 .login-input {
   width: 100%;
   background: var(--bg-2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius);
-  color: var(--ink);
+  color: var(--field-ink);
   padding: 10px 14px;
   font-family: var(--sans);
   font-size: 14px;
@@ -3611,6 +3684,8 @@ html:not([data-theme="dark"]) .coll.open .ap-input:focus { background: var(--car
   const THEME_KEY = 'WG_THEME';
   const DEV_UPDATES_KEY = 'WG_DEV_UPDATES';
   const ACCENT_KEY = 'WG_ACCENT';
+  const SOFT_COLORS_KEY = 'WG_SOFT_COLORS';
+  const ACCENT_TINT_KEY = 'WG_ACCENT_TINT';
   const SPLINE_CHART_KEY = 'WG_SPLINE_CHART';
   const REFRESH_INTERVAL_KEY = 'WG_REFRESH_INTERVAL';
   const SMOOTH_THROUGHPUT_KEY = 'WG_SMOOTH_THROUGHPUT';
@@ -3631,6 +3706,8 @@ html:not([data-theme="dark"]) .coll.open .ap-input:focus { background: var(--car
     theme: localStorage.getItem(THEME_KEY) || 'light',
     density: 'compact',
     accent: localStorage.getItem(ACCENT_KEY) || 'terracotta',
+    softColors: localStorage.getItem(SOFT_COLORS_KEY) === 'true',
+    accentTint: localStorage.getItem(ACCENT_TINT_KEY) === 'true',
     devUpdates: localStorage.getItem(DEV_UPDATES_KEY) === 'true',
     splineChart: localStorage.getItem(SPLINE_CHART_KEY) !== 'false',
     splineTension: parseFloat(localStorage.getItem(SPLINE_TENSION_KEY) || '1'),
@@ -3644,6 +3721,7 @@ html:not([data-theme="dark"]) .coll.open .ap-input:focus { background: var(--car
     const [tweaks, setTweaks] = React.useState({ ...TWEAKS_DEFAULTS });
     const themeMounted = React.useRef(false);
     const themeTimer = React.useRef(null);
+    const softColorsMounted = React.useRef(false);
 
     React.useEffect(() => {
       const theme = tweaks.theme || 'light';
@@ -3671,11 +3749,36 @@ html:not([data-theme="dark"]) .coll.open .ap-input:focus { background: var(--car
       const accent = tweaks.accent || 'terracotta';
       const root = document.documentElement;
       // The dark-mode accent overrides are keyed to [data-theme="dark"].accent-*,
-      // so the class has to live on <html> alongside data-theme.
-      Array.from(root.classList).forEach(c => { if (c.startsWith('accent-')) root.classList.remove(c); });
+      // so the class has to live on <html> alongside data-theme. "accent-tint" is a
+      // separate toggle (not an accent-theme class) and must be left alone here.
+      Array.from(root.classList).forEach(c => { if (c.startsWith('accent-') && c !== 'accent-tint') root.classList.remove(c); });
       root.classList.add('accent-' + accent);
       localStorage.setItem(ACCENT_KEY, accent);
     }, [tweaks.accent]);
+
+    React.useEffect(() => {
+      const root = document.documentElement;
+      if (softColorsMounted.current) {
+        root.classList.add('theme-switching');
+        window.clearTimeout(themeTimer.current);
+        themeTimer.current = window.setTimeout(() => {
+          root.classList.remove('theme-switching');
+        }, 360);
+      } else {
+        softColorsMounted.current = true;
+      }
+      root.classList.toggle('soft-colors', !!tweaks.softColors);
+      localStorage.setItem(SOFT_COLORS_KEY, tweaks.softColors ? 'true' : 'false');
+    }, [tweaks.softColors]);
+
+    React.useEffect(() => {
+      const root = document.documentElement;
+      // Accent tint only ever renders while soft colors is also on — it's a
+      // sub-option of it — but the preference itself persists independently,
+      // so re-enabling soft colors restores whatever tint choice was last made.
+      root.classList.toggle('accent-tint', !!(tweaks.softColors && tweaks.accentTint));
+      localStorage.setItem(ACCENT_TINT_KEY, tweaks.accentTint ? 'true' : 'false');
+    }, [tweaks.softColors, tweaks.accentTint]);
 
     React.useEffect(() => {
       localStorage.setItem(SPLINE_CHART_KEY, tweaks.splineChart ? 'true' : 'false');

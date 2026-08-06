@@ -14,6 +14,7 @@
     try {
       const th = localStorage.getItem('WG_THEME');
       if (th === 'dark' || th === 'light') document.documentElement.setAttribute('data-theme', th);
+      if (localStorage.getItem('WG_SOFT_COLORS') === 'true') document.documentElement.classList.add('soft-colors');
     } catch (e) {}
   })();
 </script>
@@ -54,6 +55,16 @@
   --shadow-sm: 0 1px 2px rgba(0,0,0,.3);
   --shadow: 0 1px 3px rgba(0,0,0,.4), 0 4px 14px rgba(0,0,0,.3);
   --shadow-lg: 0 2px 4px rgba(0,0,0,.4), 0 30px 80px rgba(0,0,0,.6);
+}
+.soft-colors {
+  --bg: #FFFFFF; --bg-2: #F5F5F5; --card: #FFFFFF; --card-raised: #FAFAFA;
+  --ink: #1A1A1A; --ink-2: #404040; --muted: #757575; --muted-2: #9E9E9E;
+  --border: #E6E6E6; --border-strong: #D4D4D4;
+}
+[data-theme="dark"].soft-colors {
+  --bg: #000000; --bg-2: #070707; --card: #0D0D0D; --card-raised: #151515;
+  --ink: #F5F5F5; --ink-2: #D0D0D0; --muted: #8F8F8F; --muted-2: #616161;
+  --border: #202020; --border-strong: #2A2A2A;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }
