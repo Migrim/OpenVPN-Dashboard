@@ -25,30 +25,6 @@
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(function () {});
   }
-  if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
-    document.documentElement.classList.add('pwa-standalone');
-  }
-  function setAppH() {
-    var h = (window.visualViewport && window.visualViewport.height >= window.innerHeight)
-      ? window.visualViewport.height : window.innerHeight;
-    document.documentElement.style.setProperty('--app-h', h + 'px');
-  }
-  setAppH();
-  window.addEventListener('resize', setAppH);
-  window.addEventListener('pageshow', setAppH);
-  window.addEventListener('orientationchange', function() { setTimeout(setAppH, 300); });
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppH);
-  document.addEventListener('visibilitychange', function() { if (!document.hidden) setAppH(); });
-  /* On a cold launch from the home-screen icon, iOS briefly reports innerHeight
-     as if the (nonexistent) Safari chrome were still there and fires no resize
-     event once it corrects itself, so re-measure a few times after paint. */
-  window.addEventListener('load', function() {
-    setAppH();
-    requestAnimationFrame(function() { requestAnimationFrame(setAppH); });
-    setTimeout(setAppH, 100);
-    setTimeout(setAppH, 500);
-    setTimeout(setAppH, 1000);
-  });
 }());
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -179,13 +155,10 @@ body {
 #root { height: 100%; display: flex; flex-direction: column; }
 
 /* ── App shell ── */
-.m-app { display: flex; flex-direction: column; height: var(--app-h, 100vh); background: var(--bg); }
-/* iOS misreports dvh/svh in home-screen "standalone" mode (it leaves room for a
-   Safari toolbar that isn't there), so keep the JS-measured --app-h there and
-   only trust dvh in a real browser tab. */
-@supports (height: 100dvh) {
-  html:not(.pwa-standalone) .m-app { height: 100dvh; }
-}
+/* Fixed + inset (rather than vh/dvh, which iOS misreports in home-screen
+   "standalone" mode by reserving room for a Safari toolbar that isn't there)
+   sizes against the real viewport geometry, so it's full-bleed everywhere. */
+.m-app { position: fixed; inset: 0; display: flex; flex-direction: column; background: var(--bg); }
 .m-header {
   flex-shrink: 0;
   padding: calc(var(--safe-top) + 12px) 16px 12px;
