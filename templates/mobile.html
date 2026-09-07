@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#F5EEE2" />
+<meta name="theme-color" content="#FDFCFA" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -19,11 +19,14 @@
   if (a && a !== 'terracotta') document.documentElement.classList.add('accent-' + a);
   var sc = localStorage.getItem('WG_SOFT_COLORS') === 'true';
   if (sc) document.documentElement.classList.add('soft-colors');
-  if (sc && localStorage.getItem('WG_ACCENT_TINT') === 'true') document.documentElement.classList.add('accent-tint');
+  if (localStorage.getItem('WG_ACCENT_TINT') === 'true') document.documentElement.classList.add('accent-tint');
   var mt = document.querySelector('meta[name="theme-color"]');
-  if (mt) mt.setAttribute('content', sc ? (t === 'dark' ? '#000000' : '#FFFFFF') : (t === 'dark' ? '#14100C' : '#F5EEE2'));
+  if (mt) mt.setAttribute('content', sc ? (t === 'dark' ? '#14100C' : '#F5EEE2') : (t === 'dark' ? '#0A0A0A' : '#FDFCFA'));
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(function () {});
+  }
+  if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) {
+    document.documentElement.classList.add('pwa-standalone');
   }
   function setAppH() {
     var h = (window.visualViewport && window.visualViewport.height >= window.innerHeight)
@@ -45,19 +48,19 @@
   --sans: 'Inter', -apple-system, system-ui, sans-serif;
   --mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
   color-scheme: light;
-  --bg:          #F5EEE2;
-  --bg-2:        #EFE7D8;
-  --card:        #FBF6EC;
-  --card-raised: #FFFCF4;
-  --ink:         #2A2520;
-  --ink-2:       #4A4238;
-  --muted:       #8A7F72;
-  --muted-2:     #A89C8C;
-  --border:      #E6DCC8;
-  --border-strong: #D6C9B0;
-  --field-ink:    #2A2520;
-  --field-muted:  #8A7F72;
-  --field-border: #E6DCC8;
+  --bg:          #FDFCFA;
+  --bg-2:        #F4F2EE;
+  --card:        #FEFDFB;
+  --card-raised: #F8F6F2;
+  --ink:         #1A1817;
+  --ink-2:       #423E3A;
+  --muted:       #7A756D;
+  --muted-2:     #98928A;
+  --border:      #E9E5DE;
+  --border-strong: #D8D2C7;
+  --field-ink:    #1A1817;
+  --field-muted:  #7A756D;
+  --field-border: #E9E5DE;
   --accent:      oklch(59% 0.15 33);
   --accent-soft: oklch(89% 0.06 33);
   --accent-2:    oklch(55% 0.09 150);
@@ -76,19 +79,19 @@
 }
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg:          #14100C;
-  --bg-2:        #1C1611;
-  --card:        #241D16;
-  --card-raised: #2F2619;
-  --ink:         #EFE6D8;
-  --ink-2:       #C8BEAE;
-  --muted:       #8A7F72;
-  --muted-2:     #6B6256;
-  --border:      #3A2F24;
-  --border-strong: #4D3E2C;
-  --field-ink:    #EFE6D8;
-  --field-muted:  #8A7F72;
-  --field-border: #3A2F24;
+  --bg:          #0A0A0A;
+  --bg-2:        #121212;
+  --card:        #101010;
+  --card-raised: #171717;
+  --ink:         #EDEDED;
+  --ink-2:       #C4C4C4;
+  --muted:       #8C8C8C;
+  --muted-2:     #636363;
+  --border:      #242424;
+  --border-strong: #303030;
+  --field-ink:    #EDEDED;
+  --field-muted:  #8C8C8C;
+  --field-border: #242424;
   --accent:      oklch(68% 0.15 33);
   --accent-soft: oklch(32% 0.08 33);
   --accent-2:    oklch(70% 0.10 150);
@@ -101,37 +104,37 @@
   --shadow:      0 1px 3px rgba(0,0,0,0.5), 0 4px 14px rgba(0,0,0,0.4);
   --shadow-sm:   0 1px 2px rgba(0,0,0,0.4);
 }
-/* Soft colors on: swap the warm cream/charcoal surfaces for a clean neutral
-   white / dark-gray palette. Accent + status colors are untouched. */
+/* Soft colors on: swap the plain neutral surfaces for a warm cream/charcoal
+   palette. Accent + status colors are untouched. */
 .soft-colors {
-  --bg: #FFFFFF;
-  --bg-2: #F5F5F5;
-  --card: #FFFFFF;
-  --card-raised: #FAFAFA;
-  --ink: #1A1A1A;
-  --ink-2: #404040;
-  --muted: #757575;
-  --muted-2: #9E9E9E;
-  --border: #E6E6E6;
-  --border-strong: #D4D4D4;
-  --field-ink: #1A1A1A;
-  --field-muted: #757575;
-  --field-border: #E6E6E6;
+  --bg: #F5EEE2;
+  --bg-2: #EFE7D8;
+  --card: #FBF6EC;
+  --card-raised: #FFFCF4;
+  --ink: #2A2520;
+  --ink-2: #4A4238;
+  --muted: #8A7F72;
+  --muted-2: #A89C8C;
+  --border: #E6DCC8;
+  --border-strong: #D6C9B0;
+  --field-ink: #2A2520;
+  --field-muted: #8A7F72;
+  --field-border: #E6DCC8;
 }
 [data-theme="dark"].soft-colors {
-  --bg: #000000;
-  --bg-2: #070707;
-  --card: #0D0D0D;
-  --card-raised: #151515;
-  --ink: #F5F5F5;
-  --ink-2: #D0D0D0;
-  --muted: #8F8F8F;
-  --muted-2: #616161;
-  --border: #202020;
-  --border-strong: #2A2A2A;
-  --field-ink: #F5F5F5;
-  --field-muted: #8F8F8F;
-  --field-border: #202020;
+  --bg: #14100C;
+  --bg-2: #1C1611;
+  --card: #241D16;
+  --card-raised: #2F2619;
+  --ink: #EFE6D8;
+  --ink-2: #C8BEAE;
+  --muted: #8A7F72;
+  --muted-2: #6B6256;
+  --border: #3A2F24;
+  --border-strong: #4D3E2C;
+  --field-ink: #EFE6D8;
+  --field-muted: #8A7F72;
+  --field-border: #3A2F24;
 }
 
 /* Accent tint (soft colors sub-option): text, numbers and icons pick up shades
@@ -165,8 +168,11 @@ body {
 
 /* ── App shell ── */
 .m-app { display: flex; flex-direction: column; height: var(--app-h, 100vh); background: var(--bg); }
+/* iOS misreports dvh/svh in home-screen "standalone" mode (it leaves room for a
+   Safari toolbar that isn't there), so keep the JS-measured --app-h there and
+   only trust dvh in a real browser tab. */
 @supports (height: 100dvh) {
-  .m-app { height: 100dvh; }
+  html:not(.pwa-standalone) .m-app { height: 100dvh; }
 }
 .m-header {
   flex-shrink: 0;
@@ -689,10 +695,10 @@ select.m-input { background-image: none; }
 .m-settings-lbl-row { display: flex; align-items: center; }
 .m-soft-preview { display: inline-flex; align-items: center; margin-right: 9px; flex-shrink: 0; }
 .m-soft-preview-swatch { width: 15px; height: 15px; border-radius: 4px; border: 1px solid var(--border-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
-.m-soft-preview-before { background: #F5EEE2; margin-right: -6px; z-index: 1; }
-.m-soft-preview-after { background: #FFFFFF; }
-[data-theme="dark"] .m-soft-preview-before { background: #14100C; }
-[data-theme="dark"] .m-soft-preview-after { background: #000000; }
+.m-soft-preview-before { background: #FDFCFA; margin-right: -6px; z-index: 1; }
+.m-soft-preview-after { background: #F5EEE2; }
+[data-theme="dark"] .m-soft-preview-before { background: #0A0A0A; }
+[data-theme="dark"] .m-soft-preview-after { background: #14100C; }
 .m-seg { display: flex; background: var(--bg-2); border: 1px solid var(--border); border-radius: 8px; padding: 2px; gap: 2px; }
 .m-seg-btn { padding: 5px 12px; border-radius: 6px; border: none; background: none; font-family: var(--mono); font-size: 12px; color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .m-seg-btn.on { background: var(--card); color: var(--ink); box-shadow: var(--shadow-sm); }
@@ -3036,15 +3042,13 @@ function SettingsTab({ theme, setTheme, accent, setAccent, softColors, setSoftCo
             </span>
             <Toggle value={softColors} onChange={setSoftColors} />
           </div>
-          {softColors && (
-            <div className="m-settings-row">
-              <div>
-                <div className="m-settings-lbl">Accent tint</div>
-                <div className="m-settings-sub">Text &amp; numbers in accent shades</div>
-              </div>
-              <Toggle value={accentTint} onChange={setAccentTint} />
+          <div className="m-settings-row">
+            <div>
+              <div className="m-settings-lbl">Accent tint</div>
+              <div className="m-settings-sub">Text &amp; numbers in accent shades, light or dark</div>
             </div>
-          )}
+            <Toggle value={accentTint} onChange={setAccentTint} />
+          </div>
         </div>
       </div>
 
@@ -3208,12 +3212,12 @@ function MobileApp() {
     localStorage.setItem('WG_SOFT_COLORS', softColors ? 'true' : 'false');
   }, [softColors]);
   useEffect(() => {
-    document.documentElement.classList.toggle('accent-tint', !!(softColors && accentTint));
+    document.documentElement.classList.toggle('accent-tint', !!accentTint);
     localStorage.setItem('WG_ACCENT_TINT', accentTint ? 'true' : 'false');
-  }, [softColors, accentTint]);
+  }, [accentTint]);
   useEffect(() => {
     const mt = document.querySelector('meta[name="theme-color"]');
-    if (mt) mt.setAttribute('content', softColors ? (theme === 'dark' ? '#000000' : '#FFFFFF') : (theme === 'dark' ? '#14100C' : '#F5EEE2'));
+    if (mt) mt.setAttribute('content', softColors ? (theme === 'dark' ? '#14100C' : '#F5EEE2') : (theme === 'dark' ? '#0A0A0A' : '#FDFCFA'));
   }, [theme, softColors]);
   useEffect(() => {
     localStorage.setItem('WG_CHART_TWEAKS', JSON.stringify(chartTweaks));

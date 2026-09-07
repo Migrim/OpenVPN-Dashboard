@@ -2016,6 +2016,7 @@ function SettingsDrawer({ tweaks, setTweaks, onClose, onUpdateAvailable }) {
   const onCooldown = remaining > 0;
   const [advancedOpen, setAdvancedOpen] = _useState(false);
   const [chartFineOpen, setChartFineOpen] = _useState(false);
+  const [softColorsFineOpen, setSoftColorsFineOpen] = _useState(false);
   const devUpdatesRef = _useRef(tweaks.devUpdates);
   devUpdatesRef.current = tweaks.devUpdates;
   const prevDevUpdatesRef = _useRef(tweaks.devUpdates);
@@ -2197,7 +2198,7 @@ function SettingsDrawer({ tweaks, setTweaks, onClose, onUpdateAvailable }) {
                 </button>
               ))}
             </div>
-            <div className="settings-list">
+            <div className="settings-list" style={{ marginTop: '10px' }}>
               <div className="setting-row">
                 <div className="setting-row-main">
                   <span className="soft-preview" aria-hidden="true">
@@ -2206,10 +2207,19 @@ function SettingsDrawer({ tweaks, setTweaks, onClose, onUpdateAvailable }) {
                   </span>
                   <div>
                     <div className="setting-title">Soft colors</div>
-                    <div className="setting-desc">Clean white / dark gray surfaces instead of warm cream</div>
+                    <div className="setting-desc">Warm cream / charcoal surfaces instead of plain white</div>
                   </div>
                 </div>
-                <div className="setting-control">
+                <div className="setting-control" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    className="chart-fine-toggle"
+                    onClick={() => setSoftColorsFineOpen(v => !v)}
+                    aria-expanded={softColorsFineOpen}
+                    title="Fine-tune accent tinting"
+                  >
+                    Customize
+                    <svg style={{ transform: softColorsFineOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+                  </button>
                   <button
                     className={`toggle ${tweaks.softColors ? 'on' : ''}`}
                     onClick={() => setTweaks({ ...tweaks, softColors: !tweaks.softColors })}
@@ -2220,15 +2230,16 @@ function SettingsDrawer({ tweaks, setTweaks, onClose, onUpdateAvailable }) {
                 </div>
               </div>
 
-              {/* Accent tint — only meaningful once soft colors is on, so it reveals
-                  itself as a sub-option instead of sitting there disabled. */}
-              <div className={`collapse-rows${tweaks.softColors ? ' open' : ''}`}>
+              {/* Accent tint — independent of soft colors, so it works on plain
+                  surfaces or warm ones, in light or dark mode. Collapsed by
+                  default, opened via the Customize toggle above. */}
+              <div className={`collapse-rows${softColorsFineOpen ? ' open' : ''}`}>
                 <div>
                   <div className="chart-fine-list">
                     <div className="setting-row">
                       <div>
                         <div className="setting-title">Accent tint</div>
-                        <div className="setting-desc">Text, numbers and icons pick up shades of your accent color. Backgrounds, containers and input fields stay neutral.</div>
+                        <div className="setting-desc">Text, numbers and icons pick up shades of your accent color, in both light and dark mode. Backgrounds, containers and input fields stay neutral.</div>
                       </div>
                       <div className="setting-control">
                         <button

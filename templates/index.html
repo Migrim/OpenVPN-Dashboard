@@ -34,7 +34,7 @@
     if (savedSoftColors) {
       document.documentElement.classList.add('soft-colors');
     }
-    if (savedSoftColors && localStorage.getItem('WG_ACCENT_TINT') === 'true') {
+    if (localStorage.getItem('WG_ACCENT_TINT') === 'true') {
       document.documentElement.classList.add('accent-tint');
     }
   })();
@@ -55,21 +55,21 @@
   color-scheme: light;
 
   /* Light */
-  --bg: #F5EEE2;
-  --bg-2: #EFE7D8;
-  --card: #FBF6EC;
-  --card-raised: #FFFCF4;
-  --ink: #2A2520;
-  --ink-2: #4A4238;
-  --muted: #8A7F72;
-  --muted-2: #A89C8C;
-  --border: #E6DCC8;
-  --border-strong: #D6C9B0;
+  --bg: #FDFCFA;
+  --bg-2: #F4F2EE;
+  --card: #FEFDFB;
+  --card-raised: #F8F6F2;
+  --ink: #1A1817;
+  --ink-2: #423E3A;
+  --muted: #7A756D;
+  --muted-2: #98928A;
+  --border: #E9E5DE;
+  --border-strong: #D8D2C7;
   /* Neutral tokens that input fields anchor to — never re-themed by .accent-tint,
      so typed text and field outlines stay legible regardless of accent tinting. */
-  --field-ink: #2A2520;
-  --field-muted: #8A7F72;
-  --field-border: #E6DCC8;
+  --field-ink: #1A1817;
+  --field-muted: #7A756D;
+  --field-border: #E9E5DE;
   --accent: oklch(59% 0.15 33);
   --accent-soft: oklch(89% 0.06 33);
   --avatar-bg: var(--accent-soft);
@@ -91,19 +91,19 @@
 
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #14100C;
-  --bg-2: #1C1611;
-  --card: #241D16;
-  --card-raised: #2F2619;
-  --ink: #EFE6D8;
-  --ink-2: #C8BEAE;
-  --muted: #8A7F72;
-  --muted-2: #6B6256;
-  --border: #3A2F24;
-  --border-strong: #4D3E2C;
-  --field-ink: #EFE6D8;
-  --field-muted: #8A7F72;
-  --field-border: #3A2F24;
+  --bg: #0A0A0A;
+  --bg-2: #121212;
+  --card: #101010;
+  --card-raised: #171717;
+  --ink: #EDEDED;
+  --ink-2: #C4C4C4;
+  --muted: #8C8C8C;
+  --muted-2: #636363;
+  --border: #242424;
+  --border-strong: #303030;
+  --field-ink: #EDEDED;
+  --field-muted: #8C8C8C;
+  --field-border: #242424;
   --accent: oklch(68% 0.15 33);
   --accent-soft: oklch(32% 0.08 33);
   --avatar-bg: var(--accent);
@@ -120,37 +120,37 @@
   --shadow-lg: 0 2px 4px rgba(0,0,0,0.5), 0 16px 40px rgba(0,0,0,0.6);
 }
 
-/* Soft colors on: swap the warm cream/charcoal surfaces for a clean neutral
-   white / dark-gray palette. Accent + status colors are untouched. */
+/* Soft colors on: swap the plain neutral surfaces for a warm cream/charcoal
+   palette. Accent + status colors are untouched. */
 .soft-colors {
-  --bg: #FFFFFF;
-  --bg-2: #F5F5F5;
-  --card: #FFFFFF;
-  --card-raised: #FAFAFA;
-  --ink: #1A1A1A;
-  --ink-2: #404040;
-  --muted: #757575;
-  --muted-2: #9E9E9E;
-  --border: #E6E6E6;
-  --border-strong: #D4D4D4;
-  --field-ink: #1A1A1A;
-  --field-muted: #757575;
-  --field-border: #E6E6E6;
+  --bg: #F5EEE2;
+  --bg-2: #EFE7D8;
+  --card: #FBF6EC;
+  --card-raised: #FFFCF4;
+  --ink: #2A2520;
+  --ink-2: #4A4238;
+  --muted: #8A7F72;
+  --muted-2: #A89C8C;
+  --border: #E6DCC8;
+  --border-strong: #D6C9B0;
+  --field-ink: #2A2520;
+  --field-muted: #8A7F72;
+  --field-border: #E6DCC8;
 }
 [data-theme="dark"].soft-colors {
-  --bg: #000000;
-  --bg-2: #070707;
-  --card: #0D0D0D;
-  --card-raised: #151515;
-  --ink: #F5F5F5;
-  --ink-2: #D0D0D0;
-  --muted: #8F8F8F;
-  --muted-2: #616161;
-  --border: #202020;
-  --border-strong: #2A2A2A;
-  --field-ink: #F5F5F5;
-  --field-muted: #8F8F8F;
-  --field-border: #202020;
+  --bg: #14100C;
+  --bg-2: #1C1611;
+  --card: #241D16;
+  --card-raised: #2F2619;
+  --ink: #EFE6D8;
+  --ink-2: #C8BEAE;
+  --muted: #8A7F72;
+  --muted-2: #6B6256;
+  --border: #3A2F24;
+  --border-strong: #4D3E2C;
+  --field-ink: #EFE6D8;
+  --field-muted: #8A7F72;
+  --field-border: #3A2F24;
 }
 
 /* Accent tint (soft colors sub-option): text, numbers and icons pick up shades
@@ -801,10 +801,10 @@ html.theme-switching .theme-toggle-icon {
 .setting-row-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .soft-preview { display: flex; align-items: center; flex-shrink: 0; }
 .soft-preview-swatch { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--border-strong); box-shadow: 0 1px 2px rgba(0,0,0,0.15); }
-.soft-preview-before { background: #F5EEE2; margin-right: -9px; z-index: 1; }
-.soft-preview-after { background: #FFFFFF; }
-[data-theme="dark"] .soft-preview-before { background: #14100C; }
-[data-theme="dark"] .soft-preview-after { background: #000000; }
+.soft-preview-before { background: #FDFCFA; margin-right: -9px; z-index: 1; }
+.soft-preview-after { background: #F5EEE2; }
+[data-theme="dark"] .soft-preview-before { background: #0A0A0A; }
+[data-theme="dark"] .soft-preview-after { background: #14100C; }
 
 /* Skeleton loading */
 @keyframes skelShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
@@ -3773,12 +3773,11 @@ html:not([data-theme="dark"]) .coll.open .ap-input:focus { background: var(--car
 
     React.useEffect(() => {
       const root = document.documentElement;
-      // Accent tint only ever renders while soft colors is also on — it's a
-      // sub-option of it — but the preference itself persists independently,
-      // so re-enabling soft colors restores whatever tint choice was last made.
-      root.classList.toggle('accent-tint', !!(tweaks.softColors && tweaks.accentTint));
+      // Accent tint is independent of soft colors — it works on plain neutral
+      // surfaces or warm ones, in either light or dark mode.
+      root.classList.toggle('accent-tint', !!tweaks.accentTint);
       localStorage.setItem(ACCENT_TINT_KEY, tweaks.accentTint ? 'true' : 'false');
-    }, [tweaks.softColors, tweaks.accentTint]);
+    }, [tweaks.accentTint]);
 
     React.useEffect(() => {
       localStorage.setItem(SPLINE_CHART_KEY, tweaks.splineChart ? 'true' : 'false');
