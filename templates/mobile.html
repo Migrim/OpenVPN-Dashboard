@@ -37,6 +37,18 @@
   window.addEventListener('resize', setAppH);
   window.addEventListener('pageshow', setAppH);
   window.addEventListener('orientationchange', function() { setTimeout(setAppH, 300); });
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', setAppH);
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) setAppH(); });
+  /* On a cold launch from the home-screen icon, iOS briefly reports innerHeight
+     as if the (nonexistent) Safari chrome were still there and fires no resize
+     event once it corrects itself, so re-measure a few times after paint. */
+  window.addEventListener('load', function() {
+    setAppH();
+    requestAnimationFrame(function() { requestAnimationFrame(setAppH); });
+    setTimeout(setAppH, 100);
+    setTimeout(setAppH, 500);
+    setTimeout(setAppH, 1000);
+  });
 }());
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
